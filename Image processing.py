@@ -23,7 +23,7 @@ R,G,B = np.zeros((1528, 1528)), np.empty((1528, 1528)), np.empty((1528, 1528)) #
 def add_channel(color):
     filepath = filedialog.askopenfilename(initialdir="C:/Users/floresj12/Documents/SpacePhotoshop/Astro-processing-tool")
     if filepath:  # Check if a file was selected
-        channel = fits.getdata(filepath)``
+        channel = fits.getdata(filepath)
         update_size = channel.shape
         print(update_size)
         #color.resize(update_size)
@@ -31,7 +31,8 @@ def add_channel(color):
 
 # Process the images once they are loaded
 def process_images():
-    rgb_default = make_lupton_rgb(R,G,B, minimum = minimum.get(), stretch=stretch.get(), Q =Q.get(), filename="ngc6976-fart.jpeg")
+    example_file = "ngc6976-example.jpeg"
+    rgb_default = make_lupton_rgb(R,G,B, minimum = minimum.get(), stretch=stretch.get(), Q =Q.get(), filename=example_file)
     disp = Image.open("C:/Users/floresj12/Documents/SpacePhotoshop/ngc6976-fart.jpeg")
     width, height = int(disp.width /2), int(disp.height /2)
     disp = disp.resize((width, height))
