@@ -8,6 +8,7 @@ from astropy.visualization import make_lupton_rgb
 from astropy.visualization import make_rgb, ManualInterval
 from astropy.visualization import SqrtStretch
 import numpy as np
+import os
 
 root = tk.Tk()
 root.geometry("1400x800")
@@ -21,7 +22,7 @@ file_path = ""
 R,G,B = np.zeros((1528, 1528)), np.empty((1528, 1528)), np.empty((1528, 1528)) #size of the image
 
 def add_channel(color):
-    filepath = filedialog.askopenfilename(initialdir="C:/Users/floresj12/Documents/SpacePhotoshop/Astro-processing-tool")
+    filepath = filedialog.askopenfilename() # the initial dir just specifies where the dialog opens up in
     if filepath:  # Check if a file was selected
         channel = fits.getdata(filepath)
         update_size = channel.shape
@@ -31,9 +32,15 @@ def add_channel(color):
 
 # Process the images once they are loaded
 def process_images():
-    example_file = "ngc6976-example.jpeg"
-    rgb_default = make_lupton_rgb(R,G,B, minimum = minimum.get(), stretch=stretch.get(), Q =Q.get(), filename=example_file)
-    disp = Image.open("C:/Users/floresj12/Documents/SpacePhotoshop/ngc6976-fart.jpeg")
+
+
+    output_dir = "OutputImage"  # This folder is created inside project now
+    os.makedirs(output_dir, exist_ok=True)  # Make sure it exists
+
+    example_file = os.path.join(output_dir, "ngc6976-example.jpeg")
+    make_lupton_rgb(R, G, B, minimum=minimum.get(), stretch=stretch.get(), Q=Q.get(), filename=example_file)
+    
+    disp = Image.open(example_file)
     width, height = int(disp.width /2), int(disp.height /2)
     disp = disp.resize((width, height))
     canvas.config(width = disp.width, height = disp.height)

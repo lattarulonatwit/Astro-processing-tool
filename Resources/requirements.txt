@@ -1,4 +1,5 @@
 astropy
 Pillow
+tkinter
 customtkinter
 numpy
