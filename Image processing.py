@@ -23,7 +23,7 @@ R,G,B = np.zeros((1528, 1528)), np.empty((1528, 1528)), np.empty((1528, 1528)) #
 def add_channel(color):
     filepath = filedialog.askopenfilename(initialdir="C:/Users/floresj12/Documents/SpacePhotoshop/Astro-processing-tool")
     if filepath:  # Check if a file was selected
-        channel = fits.getdata(filepath)
+        channel = fits.getdata(filepath)``
         update_size = channel.shape
         print(update_size)
         #color.resize(update_size)
