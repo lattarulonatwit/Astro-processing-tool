@@ -6,6 +6,7 @@ import os
 root = tk.Tk()
 
 root.title("Frame Demo")
+root.geometry("1200x800")
 root.config(bg="#FF00FF")
 #Create a dummy UI that looks like what we are trying to achieve
 #in the space photoshop app s
@@ -54,28 +55,28 @@ for menu_name, items in menu_data.items():
 # Attach menu bar to the root window
 root.config(menu=menu_bar)
 
-#Custom view port class (likely to change)
-class ScrollableViewPort(tk.Frame):
-    def __init__(self, parent, width=400, height=300, **kwargs):
-        super().__init__(parent, **kwargs)
+# #Custom view port class (likely to change)
+# class ScrollableViewPort(tk.Frame):
+#     def __init__(self, parent, width=400, height=300, **kwargs):
+#         super().__init__(parent, **kwargs)
 
-        canvas = tk.Canvas(self, width=width, height=height, bg="white")
-        scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
+#         canvas = tk.Canvas(self, width=width, height=height, bg="white")
+#         scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
 
-        self.inner_frame = tk.Frame(canvas)
-        self.inner_frame.bind("<Configure>", lambda e: canvas.config(scrollregion=canvas.bbox("all")))
+#         self.inner_frame = tk.Frame(canvas)
+#         self.inner_frame.bind("<Configure>", lambda e: canvas.config(scrollregion=canvas.bbox("all")))
 
-        canvas.create_window((0,0), window=self.inner_frame, anchor="nw")
-        canvas.configure (yscrollcommand=scrollbar.set)
+#         canvas.create_window((0,0), window=self.inner_frame, anchor="nw")
+#         canvas.configure (yscrollcommand=scrollbar.set)
 
 
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+#         canvas.pack(side="left", fill="both", expand=True)
+#         scrollbar.pack(side="right", fill="y")
 
-        self.canvas = canvas
+#         self.canvas = canvas
 
-    def add_content(self, widget):
-        widget.pack(in_=self.inner_frame, pady=5)
+#     def add_content(self, widget):
+#         widget.pack(in_=self.inner_frame, pady=5)
 
 
 class ZoomableImageViewer(tk.Frame):
@@ -87,9 +88,25 @@ class ZoomableImageViewer(tk.Frame):
         self.image = Image.open(image_path)
         self.zoom_level = 1.0
         self.display_image = ImageTk.PhotoImage(self.image)
-        self.image_id = self.canvas.create_image(0, 0, anchor="nw", image=self.display_image)
+        self.image_id = self.canvas.create_image(0, 0, anchor="center", image=self.display_image)
 
+        self.canvas.bind("<Configure>", self.center_image)  # Recenter on resize
         self.canvas.bind("<MouseWheel>", self.zoom)
+        self.canvas.bind("<ButtonPress-1>", self.start_pan)
+        self.canvas.bind("<B1-Motion>", self.do_pan)
+
+
+    def center_image(self, event=None):
+        # Center the image in the canvas
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        self.canvas.coords(self.image_id, canvas_width // 2, canvas_height // 2)
+
+    def start_pan(self, event):
+        self.canvas.scan_mark(event.x, event.y)
+    
+    def do_pan(self, event):
+        self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def zoom(self, event):
         if event.delta > 0:
@@ -116,8 +133,8 @@ main_frame = tk.Frame(root)
 main_frame.pack(fill=tk.BOTH, expand=True)
 
 # Viewport on the Left
-viewport = tk.Frame(main_frame, bg="lightblue", width=1000)
-viewport.grid(row=0, column=0, rowspan=2, sticky="nsw")
+viewport = tk.Frame(main_frame, bg="lightblue")
+viewport.grid(row=0, column=0, rowspan=2, sticky="nsew")
 
 output_dir = "OutputImage"  # This folder is created inside project now
 os.makedirs(output_dir, exist_ok=True)  # Make sure it exists
@@ -131,17 +148,17 @@ viewer.pack(fill=tk.BOTH, expand=True)
 # viewport.pack(padx=10, pady=10)
 
 # Right side cells 
-cell1 = tk.Frame(main_frame, bg="lightgray", width=600, height=300)
+cell1 = tk.Frame(main_frame, bg="lightgray")
 cell1.grid(row=0,column=1, sticky="nsew")
 
-cell2 = tk.Frame(main_frame, bg="lightyellow", width=600, height=300)
+cell2 = tk.Frame(main_frame, bg="lightyellow")
 cell2.grid(row=1, column=1, sticky="nsew")
 
 # Grid Configuration
 main_frame.grid_rowconfigure(0, weight=1)
 main_frame.grid_rowconfigure(1, weight=1)
-main_frame.grid_columnconfigure(0, weight=0) # Fixed width for viewport
-main_frame.grid_columnconfigure(1, weight=1) # Exapandable area 
+main_frame.grid_columnconfigure(0, weight=6) # Fixed width for viewport
+main_frame.grid_columnconfigure(1, weight=4) # Exapandable area 
 
 
 
