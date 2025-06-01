@@ -8,7 +8,13 @@ class MainWindow:
     def __init__(self, root):
         self.root = root
         self.root.geometry("1200x800")
+        self.root.minsize(1000, 600)  # Set minimum width and height
         self.root.title("Astro Image Processor")
+        
+        # Configure root grid weights for responsive layout
+        self.root.grid_columnconfigure(0, weight=4)  # Canvas gets more space
+        self.root.grid_columnconfigure(1, weight=3)  # Sidebar gets less space
+        self.root.grid_rowconfigure(0, weight=1)     # Row expands
         
         #Call to create each UI element
         self.setup_menu_items()
@@ -43,10 +49,34 @@ class MainWindow:
         # Attach menu bar to root window
         self.root.config(menu=menu_bar)
 
+    # Function to create the canvas for the image
     def create_canvas(self):
-        # Placeholder for canvas creation code
-        pass
+
+        # Create the frame to hold the canvas 
+        self.canvas_frame = tk.Frame(self.root)
+        self.canvas_frame.grid(row=0, column=0, sticky="nsew")
+        
+        self.canvas = tk.Canvas(
+            self.canvas_frame,
+            background="black"
+        )
+        self.canvas.pack(fill="both", expand=True)
+
 
     def setup_sidebar(self):
-        # Placeholder for sidebar setup
-        pass
+
+        # Create the frame to hold the cells 
+        self.sidebar_frame = tk.Frame(self.root)
+        self.sidebar_frame.grid(row=0, column=1, sticky="nsew")
+        
+        # Configure sidebar grid
+        self.sidebar_frame.grid_rowconfigure(0, weight=1)
+        self.sidebar_frame.grid_rowconfigure(1, weight=1)
+        self.sidebar_frame.grid_columnconfigure(0, weight=1)
+        
+        # Create cells
+        cell1 = tk.Frame(self.sidebar_frame, bg='lightgray')
+        cell1.grid(row=0, column=0, sticky="nsew")
+        
+        cell2 = tk.Frame(self.sidebar_frame, bg='lightyellow')
+        cell2.grid(row=1, column=0, sticky="nsew")

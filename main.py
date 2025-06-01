@@ -1,3 +1,5 @@
+# This is the app entry point
+# **Run this file to start the app**
 import tkinter as tk
 from ui.main_window import MainWindow
 
