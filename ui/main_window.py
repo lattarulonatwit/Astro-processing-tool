@@ -75,8 +75,11 @@ class MainWindow:
         self.sidebar_frame.grid_columnconfigure(0, weight=1)
         
         # Create cells
-        cell1 = tk.Frame(self.sidebar_frame, bg='lightgray')
-        cell1.grid(row=0, column=0, sticky="nsew")
+
+        # Create control cell
+        control_cell = tk.Frame(self.sidebar_frame, bg='lightgray')
+        control_cell.grid(row=0, column=0, sticky="nsew")
         
-        cell2 = tk.Frame(self.sidebar_frame, bg='lightyellow')
-        cell2.grid(row=1, column=0, sticky="nsew")
+        # Create Metadata cell
+        metadata_cell = tk.Frame(self.sidebar_frame, bg='lightyellow')
+        metadata_cell.grid(row=1, column=0, sticky="nsew")
