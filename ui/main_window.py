@@ -1,4 +1,5 @@
 import tkinter as tk
+from .fits_upload_modal import FitsUploadModal  # Add this import
 
 
 # Class that creates Main window 
@@ -37,7 +38,7 @@ class MainWindow:
                 ("Export Image", lambda: print("Export Image clicked")),
             ],
             "Upload": [
-                ("Upload Fits", lambda: print("Upload Fits clicked"))
+                ("Upload Fits", lambda: self.show_fits_upload())  # Change this line
             ]
         }
 
@@ -83,3 +84,12 @@ class MainWindow:
         # Create Metadata cell
         metadata_cell = tk.Frame(self.sidebar_frame, bg='lightyellow')
         metadata_cell.grid(row=1, column=0, sticky="nsew")
+
+    # Function to open the fits file upload
+    def show_fits_upload(self):
+        dialog = FitsUploadModal(self.root)
+        dialog.grab_set()  # Make dialog modal
+        self.root.wait_window(dialog)  # Wait for dialog to close
+
+        #This line above I assume opening is a blocking command 
+        # meaning that the code comes back here once the window is closed 
