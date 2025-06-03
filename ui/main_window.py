@@ -1,5 +1,9 @@
 import tkinter as tk
-from .fits_upload_modal import FitsUploadModal  # Add this import
+from .fits_upload_modal import FitsUploadModal
+from astropy.io import fits
+from astropy.visualization import ZScaleInterval, AsinhStretch
+import numpy as np
+from PIL import Image, ImageTk
 
 
 # Class that creates Main window 
@@ -90,6 +94,67 @@ class MainWindow:
         dialog = FitsUploadModal(self.root)
         dialog.grab_set()  # Make dialog modal
         self.root.wait_window(dialog)  # Wait for dialog to close
+        
+        # The above is a blocking command meaning the code come back here once it is closed
+        # The modal returns the fits files when "Build Image is clicked "
 
-        #This line above I assume opening is a blocking command 
-        # meaning that the code comes back here once the window is closed 
+        # Get the files selected in the dialog
+        if hasattr(dialog, 'fits_files'):
+            self.process_fits_files(dialog.fits_files)
+
+    # Function to process fits files 
+    # Steps are Load them -> Process the data -> Create the RGB Image -> Display on canvas
+    def process_fits_files(self, fits_files):
+        if all(fits_files.values()):  # Check if all channels have files
+            try:
+                # Load each FITS file
+                rgb_data = {}
+                for channel, filepath in fits_files.items():
+                    with fits.open(filepath) as hdul:
+
+                        
+                        #********** The below is hard coded but it is what we wish to 
+                        # edit on the top control cell*****************************
+
+                        # Get the image data and process it
+                        data = hdul[0].data
+                        
+                        # Apply ZScale normalization
+                        zscale = ZScaleInterval()
+                        data = zscale(data)
+                        
+                        # Apply stretch to bring out faint details
+                        stretch = AsinhStretch()
+                        data = stretch(data)
+                        
+                        # Scale to 0-255 range for display
+                        data = (data * 255).astype(np.uint8)
+                        
+                        rgb_data[channel] = data
+                
+                # Create RGB image array
+                rgb_array = np.stack([
+                    rgb_data['R'],
+                    rgb_data['G'],
+                    rgb_data['B']
+                ], axis=-1)  # Stack along the last axis
+
+                # Create PIL Image
+                image = Image.fromarray(rgb_array, mode='RGB')
+                
+                # Convert to PhotoImage for tkinter
+                photo = ImageTk.PhotoImage(image)
+                
+                # Display in canvas
+                self.canvas.create_image(
+                    self.canvas.winfo_width()//2,
+                    self.canvas.winfo_height()//2,
+                    image=photo,
+                    anchor="center"
+                )
+                
+                # Keep a reference to prevent garbage collection
+                self.current_image = photo
+                
+            except Exception as e:
+                print(f"Error processing FITS files: {e}")
