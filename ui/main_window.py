@@ -4,6 +4,7 @@ from astropy.io import fits
 from astropy.visualization import ZScaleInterval, AsinhStretch
 import numpy as np
 from PIL import Image, ImageTk
+from .viewport.zoomable_viewer import ZoomableImageViewer
 
 
 # Class that creates Main window 
@@ -61,11 +62,16 @@ class MainWindow:
         self.canvas_frame = tk.Frame(self.root)
         self.canvas_frame.grid(row=0, column=0, sticky="nsew")
         
-        self.canvas = tk.Canvas(
-            self.canvas_frame,
-            background="black"
-        )
-        self.canvas.pack(fill="both", expand=True)
+
+        self.image_viewer = ZoomableImageViewer(self.canvas_frame)
+        self.image_viewer.pack(fill="both", expand=True)
+
+
+        # self.canvas = tk.Canvas(
+        #     self.canvas_frame,
+        #     background="black"
+        # )
+        # self.canvas.pack(fill="both", expand=True)
 
 
     def setup_sidebar(self):
@@ -145,13 +151,7 @@ class MainWindow:
                 # Convert to PhotoImage for tkinter
                 photo = ImageTk.PhotoImage(image)
                 
-                # Display in canvas
-                self.canvas.create_image(
-                    self.canvas.winfo_width()//2,
-                    self.canvas.winfo_height()//2,
-                    image=photo,
-                    anchor="center"
-                )
+                self.image_viewer.load_image(image)
                 
                 # Keep a reference to prevent garbage collection
                 self.current_image = photo
