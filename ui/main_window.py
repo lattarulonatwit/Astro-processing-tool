@@ -5,6 +5,8 @@ from astropy.visualization import ZScaleInterval, AsinhStretch
 import numpy as np
 from PIL import Image, ImageTk
 from .viewport.zoomable_viewer import ZoomableImageViewer
+from functools import partial
+import time
 
 
 # Class that creates Main window 
@@ -27,6 +29,9 @@ class MainWindow:
         self.create_canvas()
         self.setup_sidebar()
 
+        self.last_update = 0
+        self.update_delay = 0.1  # 100ms delay between updates
+        
     # UI Elements are created via the functions below
     def setup_menu_items(self):
         # Create menu bar
@@ -91,9 +96,54 @@ class MainWindow:
         control_cell = tk.Frame(self.sidebar_frame, bg='lightgray')
         control_cell.grid(row=0, column=0, sticky="nsew")
         
+        # Add image control sliders
+        self.add_control_sliders(control_cell)
+
         # Create Metadata cell
         metadata_cell = tk.Frame(self.sidebar_frame, bg='lightyellow')
         metadata_cell.grid(row=1, column=0, sticky="nsew")
+
+    def add_control_sliders(self, parent):
+        """Add sliders and apply button for image processing parameters"""
+        # Initialize default values
+        self.zscale_contrast = tk.DoubleVar(value=0.25)
+        self.stretch_a = tk.DoubleVar(value=0.1)
+        self.stretch_factor = tk.DoubleVar(value=3.0)
+        
+        # Create frames for each parameter
+        for name, var, from_, to, resolution in [
+            ("ZScale Contrast", self.zscale_contrast, 0.1, 1.0, 0.05),
+            ("Stretch A", self.stretch_a, 0.01, 1.0, 0.01),
+            ("Stretch Factor", self.stretch_factor, 0.1, 10.0, 0.1)
+        ]:
+            frame = tk.Frame(parent)
+            frame.pack(pady=5, fill='x', padx=5)
+            
+            tk.Label(frame, text=name).pack(side='top', anchor='w')
+            
+            # Remove debounce from sliders
+            slider = tk.Scale(
+                frame,
+                variable=var,
+                from_=from_,
+                to=to,
+                resolution=resolution,
+                orient='horizontal'
+            )
+            slider.pack(fill='x', expand=True)
+
+        # Add Apply Changes button
+        apply_button = tk.Button(
+            parent,
+            text="Apply Changes",
+            command=self.update_image_processing
+        )
+        apply_button.pack(pady=10)
+
+    def update_image_processing(self):
+        """Update image when sliders change"""
+        if hasattr(self, 'current_fits_files'):
+            self.process_fits_files(self.current_fits_files)
 
     # Function to open the fits file upload
     def show_fits_upload(self):
@@ -113,25 +163,23 @@ class MainWindow:
     def process_fits_files(self, fits_files):
         if all(fits_files.values()):  # Check if all channels have files
             try:
+                # Store files for reprocessing when sliders change
+                self.current_fits_files = fits_files
+                
                 # Load each FITS file
                 rgb_data = {}
                 for channel, filepath in fits_files.items():
                     with fits.open(filepath) as hdul:
-
-                        
-                        #********** The below is hard coded but it is what we wish to 
-                        # edit on the top control cell*****************************
-
                         # Get the image data and process it
                         data = hdul[0].data
                         
-                        # Apply ZScale normalization
-                        zscale = ZScaleInterval()
+                        # Apply ZScale normalization with slider value
+                        zscale = ZScaleInterval(contrast=self.zscale_contrast.get())
                         data = zscale(data)
                         
-                        # Apply stretch to bring out faint details
-                        stretch = AsinhStretch()
-                        data = stretch(data)
+                        # Apply stretch with slider values
+                        stretch = AsinhStretch(a=self.stretch_a.get())
+                        data = stretch(data * self.stretch_factor.get())
                         
                         # Scale to 0-255 range for display
                         data = (data * 255).astype(np.uint8)
@@ -143,18 +191,14 @@ class MainWindow:
                     rgb_data['R'],
                     rgb_data['G'],
                     rgb_data['B']
-                ], axis=-1)  # Stack along the last axis
+                ], axis=-1)
 
-                # Create PIL Image
+                # Create PIL Image and display
                 image = Image.fromarray(rgb_array, mode='RGB')
-                
-                # Convert to PhotoImage for tkinter
-                photo = ImageTk.PhotoImage(image)
-                
                 self.image_viewer.load_image(image)
                 
-                # Keep a reference to prevent garbage collection
-                self.current_image = photo
+                # Store reference
+                self.current_image = ImageTk.PhotoImage(image)
                 
             except Exception as e:
                 print(f"Error processing FITS files: {e}")
