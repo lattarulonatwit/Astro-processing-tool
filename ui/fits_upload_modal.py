@@ -15,7 +15,7 @@ class FitsUploadModal(tk.Toplevel):
         self.geometry("500x400")
         
         # Dictionary to store file paths they are set to None by default
-        self.fits_files = {
+        self.fit_files = {
             'R': None,
             'G': None,
             'B': None
@@ -81,7 +81,7 @@ class FitsUploadModal(tk.Toplevel):
         
         # If a file was selected, store it
         if filename:
-            self.fits_files[channel] = filename
+            self.fit_files[channel] = filename
             # Show filename in label
             self.filename_labels[channel].config(text=os.path.basename(filename))
             print(f"Selected {channel} channel file: {filename}")
@@ -99,7 +99,7 @@ class FitsUploadModal(tk.Toplevel):
         # Check if all files selected
 
         # loop through channels and check if any of the files are not uploaded (we currently only handle 3)
-        missing_channels = [channel for channel, filepath in self.fits_files.items() if filepath is None]
+        missing_channels = [channel for channel, filepath in self.fit_files.items() if filepath is None]
 
 
         # Show an error box if any of the channels are empty
@@ -114,7 +114,7 @@ class FitsUploadModal(tk.Toplevel):
         # Check if files are .fit files
 
         # Ideally this should never happen but it's good to check 
-        for channel, filepath in self.fits_files.items():
+        for channel, filepath in self.fit_files.items():
             if not filepath.lower().endswith(('.fit','.fits', '.fts')):
                 messagebox.showerror(
                     "Invalid File",
@@ -127,9 +127,9 @@ class FitsUploadModal(tk.Toplevel):
 
         # Check dimensions match
         success, message = self.check_rgb_sized(
-            self.fits_files['R'],
-            self.fits_files['G'],
-            self.fits_files['B']
+            self.fit_files['R'],
+            self.fit_files['G'],
+            self.fit_files['B']
         )
 
         # If the sizes do not match return an error screen
@@ -174,7 +174,7 @@ class FitsUploadModal(tk.Toplevel):
             return # Exit if validation fails
     
         # Store selected files before destroying window
-        selected_files = self.fits_files.copy()
+        selected_files = self.fit_files.copy()
         
         # Close the modal
         self.destroy()
