@@ -7,6 +7,8 @@ from PIL import Image, ImageTk
 from .viewport.zoomable_viewer import ZoomableImageViewer
 from functools import partial
 import time
+import os
+from core.project import Project
 
 
 # Class that creates Main window 
@@ -19,6 +21,10 @@ class MainWindow:
         self.root.minsize(1000, 600)  # Set minimum width and height
         self.root.title("Astro Image Processor")
         
+        # Initalize current project 
+        self.current_project = Project.create_new()
+        self.update_window_title()
+
         # Configure root grid weights for responsive layout
         self.root.grid_columnconfigure(0, weight=4)  # Canvas gets more space
         self.root.grid_columnconfigure(1, weight=3)  # Sidebar gets less space
@@ -40,9 +46,9 @@ class MainWindow:
         # Define menu items with categories and commands
         menu_data = {
             "File": [
-                ("New", lambda: print("New clicked")),
-                ("Open", lambda: print("Open clicked")),
-                ("Save Project", lambda: print("Save Project clicked"))
+                ("New", lambda: self.new_project()),
+                ("Open", lambda: self.load_project()),
+                ("Save Project", lambda: self.save_project())
             ],
             "Export": [
                 ("Export Image", lambda: print("Export Image clicked")),
@@ -142,8 +148,120 @@ class MainWindow:
 
     def update_image_processing(self):
         """Update image when sliders change"""
-        if hasattr(self, 'current_fits_files'):
-            self.process_fits_files(self.current_fits_files)
+        if hasattr(self, 'current_fit_files'):
+            self.process_fit_files(self.current_fit_files)
+
+
+    def close_current_project(self):
+        """Close and cleanup current project"""
+        try:
+            # Clear image viewer
+            if hasattr(self, 'image_viewer'):
+                self.image_viewer.load_image(None)
+            
+            # Clear stored FITS files
+            if hasattr(self, 'current_fit_files'):
+                delattr(self, 'current_fit_files')
+                
+            # Clear current image reference
+            if hasattr(self, 'current_image'):
+                delattr(self, 'current_image')
+                
+            return True
+        except Exception as e:
+            tk.messagebox.showerror(
+                "Error Closing Project",
+                f"Failed to close project: {str(e)}"
+            )
+            return False
+
+    # New Project 
+    def new_project(self):
+        """Create a new empty project"""
+        # Ask for confirmation if there's a current project
+        if hasattr(self, 'current_project'):
+            if tk.messagebox.askyesno(
+                "New Project",
+                "Do you want to close the current project and create a new one?"
+            ):
+                if not self.close_current_project():
+                    return
+            else:
+                return
+                
+        try:
+            # Create new project with default settings
+            self.current_project = Project.create_new()
+            
+            # Reset UI controls to default values
+            self.zscale_contrast.set(self.current_project.settings['zscale_contrast'])
+            self.stretch_a.set(self.current_project.settings['stretch_a'])
+            self.stretch_factor.set(self.current_project.settings['stretch_factor'])
+            
+            # Update window title
+            self.update_window_title()
+            
+        except Exception as e:
+            tk.messagebox.showerror(
+                "Error Creating New Project",
+                f"Failed to create new project: {str(e)}"
+            )
+
+
+    # Save project 
+    def save_project(self):
+        filename = tk.filedialog.asksaveasfilename(
+            defaultextension = ".aip",
+            filetypes=[
+                       ("Astro Image Project", "*.aip"),
+                       ("All Files", "*.*")
+            ]
+        )
+        if filename:
+            
+            new_name = os.path.splitext(os.path.basename(filename))[0]
+            self.current_project.update_name(new_name)
+            self.update_window_title()
+            self.current_project.save(os.path.dirname(filename))
+
+
+
+    # Load project 
+    def load_project(self):
+        """Load an existing .aip project files"""
+        filename = tk.filedialog.askopenfilename(
+
+            defaultextension = ".aip",
+            filetypes=[
+                ("Astro Image Project", "*.aip"),
+                ("All Files", "*.*")
+            ]
+        )
+
+        if filename:
+            try:
+                # Load Project 
+                self.current_project = Project.load(filename)
+                self.update_window_title()
+        
+                # Update UI with saved parameter values 
+                self.zscale_contrast.set(self.current_project.settings['zscale_contrast'])
+                self.stretch_a.set(self.current_project.settings['stretch_a'])
+                self.stretch_factor.set(self.current_project.settings['stretch_factor'])
+
+                # Load FITS files if they exist 
+                if all(self.current_project.fit_files.values()):
+                    self.process_fit_files(self.current_project.fit_files)
+                
+            except Exception as e:
+                tk.messagebox.showerror(
+                    "Error Loading Project",
+                    f"Failed to load project: {str(e)}"
+                )
+
+    def update_window_title(self):
+        """Update window title with project name"""
+        self.root.title(f"Astro Image Processor - {self.current_project.name}")
 
     # Function to open the fits file upload
     def show_fits_upload(self):
@@ -155,20 +273,20 @@ class MainWindow:
         # The modal returns the fits files when "Build Image is clicked "
 
         # Get the files selected in the dialog
-        if hasattr(dialog, 'fits_files'):
-            self.process_fits_files(dialog.fits_files)
+        if hasattr(dialog, 'fit_files'):
+            self.process_fit_files(dialog.fit_files)
 
     # Function to process fits files 
     # Steps are Load them -> Process the data -> Create the RGB Image -> Display on canvas
-    def process_fits_files(self, fits_files):
-        if all(fits_files.values()):  # Check if all channels have files
+    def process_fit_files(self, fit_files):
+        if all(fit_files.values()):  # Check if all channels have files
             try:
                 # Store files for reprocessing when sliders change
-                self.current_fits_files = fits_files
+                self.current_fit_files = fit_files
                 
                 # Load each FITS file
                 rgb_data = {}
-                for channel, filepath in fits_files.items():
+                for channel, filepath in fit_files.items():
                     with fits.open(filepath) as hdul:
                         # Get the image data and process it
                         data = hdul[0].data
