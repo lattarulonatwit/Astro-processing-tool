@@ -207,31 +207,66 @@ class MainWindow:
                 f"Failed to create new project: {str(e)}"
             )
 
-
+            
     # Save project 
     def save_project(self):
         filename = tk.filedialog.asksaveasfilename(
-            defaultextension = ".aip",
+            defaultextension=".aip",
             filetypes=[
-                       ("Astro Image Project", "*.aip"),
-                       ("All Files", "*.*")
+                ("Astro Image Project", "*.aip"),
+                ("All Files", "*.*")
             ]
         )
+        
         if filename:
-            
-            new_name = os.path.splitext(os.path.basename(filename))[0]
-            self.current_project.update_name(new_name)
-            self.update_window_title()
-            self.current_project.save(os.path.dirname(filename))
+            try:
+                # Update project settings
+                self.current_project.settings.update({
+                    'zscale_contrast': self.zscale_contrast.get(),
+                    'stretch_a': self.stretch_a.get(),
+                    'stretch_factor': self.stretch_factor.get()
+                })
+                
+                # Store FITS file data
+                if hasattr(self, 'current_fit_files'):
+                    for channel, filepath in self.current_fit_files.items():
+                        self.current_project.save_fits_file(channel, filepath)
+                
+                    # Process and save current image
+                    rgb_data = {}
+                    for channel in ['R', 'G', 'B']:
+                        data = self.current_project.get_fits_data(channel)
+                        if data is not None:
+                            zscale = ZScaleInterval(contrast=self.zscale_contrast.get())
+                            data = zscale(data)
+                            stretch = AsinhStretch(a=self.stretch_a.get())
+                            data = stretch(data * self.stretch_factor.get())
+                            data = (data * 255).astype(np.uint8)
+                            rgb_data[channel] = data
+
+                    if len(rgb_data) == 3:
+                        rgb_array = np.stack([rgb_data['R'], rgb_data['G'], rgb_data['B']], axis=-1)
+                        pil_image = Image.fromarray(rgb_array, mode='RGB')
+                        self.current_project.save_image(pil_image)
+                
+                # Save project file
+                self.current_project.name = os.path.splitext(os.path.basename(filename))[0]
+                self.current_project.save(filename)
+                self.update_window_title()
+                
+            except Exception as e:
+                tk.messagebox.showerror(
+                    "Error Saving Project",
+                    f"Failed to save project: {str(e)}"
+                )
 
 
 
     # Load project 
     def load_project(self):
-        """Load an existing .aip project files"""
+        """Load an existing .aip project file"""
         filename = tk.filedialog.askopenfilename(
-
-            defaultextension = ".aip",
+            defaultextension=".aip",
             filetypes=[
                 ("Astro Image Project", "*.aip"),
                 ("All Files", "*.*")
@@ -249,10 +284,16 @@ class MainWindow:
                 self.stretch_a.set(self.current_project.settings['stretch_a'])
                 self.stretch_factor.set(self.current_project.settings['stretch_factor'])
 
-                # Load FITS files if they exist 
+                # Display saved image if available
+                saved_image = self.current_project.get_processed_image()
+                if saved_image:
+                    self.image_viewer.load_image(saved_image)
+
+
+                # If project has FITS files, process them with current parameters
                 if all(self.current_project.fit_files.values()):
-                    self.process_fit_files(self.current_project.fit_files)
-                
+                    self.current_fit_files = self.current_project.fit_files
+            
             except Exception as e:
                 tk.messagebox.showerror(
                     "Error Loading Project",
