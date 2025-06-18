@@ -1,82 +1,118 @@
 from dataclasses import dataclass
 from typing import Dict, Optional
-import json 
-import os 
+import json
+import os
 from datetime import datetime
+import base64
+from io import BytesIO
+from PIL import Image
+from astropy.io import fits
 
-@dataclass 
+
+@dataclass
 class Project:
     """Represents an image processing project"""
-    # str is a built in type that represents string data types
-    name: str
-    created_date: str
-    fit_files: Dict[str, Optional[str]] # RGB channel paths
-    settings: Dict[str, float] # Processing parameters
-
+    name: str                            # Project Name 
+    created_date: str                    # Creation date 
+    fit_files: Dict[str, Optional[str]]  # variable to hold the fit files
+    settings: Dict[str, float]           # These are the parameters 
+    image_binary: Optional[bytes] = None # Encoded binary image 
+    fit_binaries: Dict[str, Optional[bytes]] = None  # Field for binary data if fit files   
 
     @classmethod
-    def create_new(cls, name: str="Untitled Project"):
+    def create_new(cls):
         # Create a new empty project
-        # cls refers to the class itself not an instance of the class
         return cls(
-            name=name,
-            created_date=datetime.now().isoformat(),
-            fit_files={'R': None, 'G': None, 'B': None},
-            settings={
+            name="Untitled",                              # Default project name
+            created_date=datetime.now().isoformat(),      # Set the created date 
+            fit_files={'R': None, 'G': None, 'B': None},  # Original file paths
+            settings={                                    # Parameter settings (there may be more added and these values are subject to change)
                 'zscale_contrast': 0.25,
                 'stretch_a': 0.1,
                 'stretch_factor': 3.0
-            }
+            },
+            image_binary=None,                              # No image upon starting of a new project
+            fit_binaries={'R': None, 'G': None, 'B': None}  # Binary storage of fit files
         )
 
+    def save_fits_file(self, channel: str, filepath: str):
+        """Store FITS file binary data"""
+        if filepath and os.path.exists(filepath):
+            with open(filepath, 'rb') as f:
+                self.fit_binaries[channel] = f.read()
 
+    def get_fits_data(self, channel: str):
+        """Get FITS data from stored binary"""
+        if self.fit_binaries.get(channel):
+            buffer = BytesIO(self.fit_binaries[channel])
+            return fits.open(buffer)[0].data
+        return None
+    
+    def get_processed_image(self) -> Optional[Image.Image]:
+        """Convert stored binary data back to PIL Image"""
+        if self.image_binary:
+            try:
+                return Image.open(BytesIO(self.image_binary))
+            except Exception as e:
+                print(f"Error loading image from binary: {e}")
+        return None
 
-    def save(self, directory: str):
-        """Save project as .aip file (JSON format with custom extensions)"""
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+    def save(self, filepath: str):
+        """Save project with all binary data"""
+        # Convert binaries to base64 for JSON storage
+        encoded_image = base64.b64encode(self.image_binary).decode('utf-8') if self.image_binary else None
+        encoded_fits = {}
+        for channel, binary in self.fit_binaries.items():
+            encoded_fits[channel] = base64.b64encode(binary).decode('utf-8') if binary else None
+
+        # Dictionary to represent a projects data (includes all fields that a project object has)
+        project_data = {
+            'name': self.name,
+            'created_date': self.created_date,
+            'fit_files': self.fit_files,  
+            'settings': self.settings,
+            'image_binary': encoded_image,
+            'fit_binaries': encoded_fits
+        }
         
-        # Use custom aip extension
-        filepath = os.path.join(directory, f"{self.name}.aip")
-
-        # Save as JSON format internally 
+        # Write out the project's data to a json file (our aip file)
         with open(filepath, 'w') as f:
-            json.dump({
-                'name': self.name,
-                'created_date': self.created_date,
-                'fit_files': self.fit_files,
-                'settings': self.settings}
-                , f, indent=4)
-
+            json.dump(project_data, f)
 
     @classmethod
-    def load(cls, filepath:str):
-        """Load . aip project file"""
-        try:
-            if not filepath.endswith('.aip'):
-                raise ValueError("File must have .aip extension")
+    def load(cls, filepath: str):
+        """Load project and decode all binary data"""
+        with open(filepath, 'r') as f:
+            data = json.load(f)
             
-            with open(filepath, 'r') as f:
-                data= json.load(f)
+        # Decode base64 data back to binary
+        if data.get('image_binary'):
+            data['image_binary'] = base64.b64decode(data['image_binary'])
+            
+        fit_binaries = {}
+        for channel, encoded in data.get('fit_binaries', {}).items():
+            fit_binaries[channel] = base64.b64decode(encoded) if encoded else None
+        data['fit_binaries'] = fit_binaries
+        
+        # Ensure fit_files exists
+        if 'fit_files' not in data:
+            data['fit_files'] = {'R': None, 'G': None, 'B': None}
+            
+        return cls(**data)
 
-            # Ensure required fields of json exist (save file is not malformed)
-            required_fields = ['name', 'created_date','fit_files', 'settings']
-            if not all(field in data for field in required_fields):
-                raise ValueError("Invalid project file: missing required fields")
-            
-            return cls(
-                name=data['name'],
-                created_date=data['created_date'],
-                fit_files=data['fit_files'],
-                settings=data['settings']
-            )
-        except json.JSONDecodeError:
-            raise ValueError("Invalid project file: not a valid JSON format")
-        except Exception as e:
-            raise ValueError(f"Failed to load project: {str(e)}")
-    
-   
-    
+    def save_image(self, pil_image: Image.Image):
+        """Convert PIL Image to binary and store"""
+        if pil_image:
+            buffer = BytesIO()
+            pil_image.save(buffer, format='PNG')
+            self.image_binary = buffer.getvalue()
+
+    def get_image(self) -> Optional[Image.Image]:
+        """Get stored binary as PIL Image"""
+        if self.image_binary:
+            return Image.open(BytesIO(self.image_binary))
+        return None
+
     def update_name(self, new_name: str):
         """Update project name and return True if successful"""
         if new_name:
