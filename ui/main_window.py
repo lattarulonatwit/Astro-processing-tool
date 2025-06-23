@@ -175,6 +175,7 @@ class MainWindow:
             )
             return False
 
+    # TODO Upon pressing new project the canvas should be cleared to effectively create a "new project"
     # New Project 
     def new_project(self):
         """Create a new empty project"""
@@ -192,12 +193,16 @@ class MainWindow:
         try:
             # Create new project with default settings
             self.current_project = Project.create_new()
-            
+            self.image_viewer.clear()
+
+
             # Reset UI controls to default values
             self.zscale_contrast.set(self.current_project.settings['zscale_contrast'])
             self.stretch_a.set(self.current_project.settings['stretch_a'])
             self.stretch_factor.set(self.current_project.settings['stretch_factor'])
             
+
+
             # Update window title
             self.update_window_title()
             

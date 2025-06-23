@@ -89,3 +89,13 @@ class ZoomableImageViewer(tk.Frame):
     def pan(self, event):
         """Pan the image"""
         self.canvas.scan_dragto(event.x, event.y, gain=1)
+
+    def clear(self):
+        """Clear canvas and reset the zoom"""
+        self.image = None
+        self.display_image = None
+        if self.image_id:
+            self.canvas.delete(self.image_id)
+            self.image_id = None
+
+        self.zoom_level = 1.0
