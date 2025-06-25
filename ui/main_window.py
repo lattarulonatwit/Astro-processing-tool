@@ -9,6 +9,8 @@ from functools import partial
 import time
 import os
 from core.project import Project
+from core.image_processing import process_fits_binaries
+from ui.sidebar.image_controls import ImageControlsCell
 
 
 # Class that creates Main window 
@@ -17,6 +19,13 @@ class MainWindow:
     #function to intialize the window 
     def __init__(self, root):
         self.root = root
+
+        # Initialize image control variables for image 
+        self.zscale_contrast = tk.DoubleVar(value = 0.25)
+        self.stretch_a = tk.DoubleVar(value = 0.1)
+        self.stretch_factor = tk.DoubleVar(value=3.0)
+
+
         self.root.geometry("1200x800")
         self.root.minsize(1000, 600)  # Set minimum width and height
         self.root.title("Astro Image Processor")
@@ -96,60 +105,43 @@ class MainWindow:
         self.sidebar_frame.grid_rowconfigure(1, weight=1)
         self.sidebar_frame.grid_columnconfigure(0, weight=1)
         
-        # Create cells
-
-        # Create control cell
-        control_cell = tk.Frame(self.sidebar_frame, bg='lightgray')
-        control_cell.grid(row=0, column=0, sticky="nsew")
         
-        # Add image control sliders
-        self.add_control_sliders(control_cell)
+
+        # START OF CELL CREATION
+
+        # Create Control cell
+
+        self.image_controls_cell = ImageControlsCell(
+        self.sidebar_frame,
+        self.zscale_contrast,
+        self.stretch_a,
+        self.stretch_factor,
+        self.update_image_processing  # Pass the function to call on apply
+        )
+
+        # Place it
+        self.image_controls_cell.grid(row=0, column=0, sticky="nsew")
 
         # Create Metadata cell
         metadata_cell = tk.Frame(self.sidebar_frame, bg='lightyellow')
         metadata_cell.grid(row=1, column=0, sticky="nsew")
 
-    def add_control_sliders(self, parent):
-        """Add sliders and apply button for image processing parameters"""
-        # Initialize default values
-        self.zscale_contrast = tk.DoubleVar(value=0.25)
-        self.stretch_a = tk.DoubleVar(value=0.1)
-        self.stretch_factor = tk.DoubleVar(value=3.0)
-        
-        # Create frames for each parameter
-        for name, var, from_, to, resolution in [
-            ("ZScale Contrast", self.zscale_contrast, 0.1, 1.0, 0.05),
-            ("Stretch A", self.stretch_a, 0.01, 1.0, 0.01),
-            ("Stretch Factor", self.stretch_factor, 0.1, 10.0, 0.1)
-        ]:
-            frame = tk.Frame(parent)
-            frame.pack(pady=5, fill='x', padx=5)
-            
-            tk.Label(frame, text=name).pack(side='top', anchor='w')
-            
-            # Remove debounce from sliders
-            slider = tk.Scale(
-                frame,
-                variable=var,
-                from_=from_,
-                to=to,
-                resolution=resolution,
-                orient='horizontal'
-            )
-            slider.pack(fill='x', expand=True)
+        # END OF CELL CREATION
 
-        # Add Apply Changes button
-        apply_button = tk.Button(
-            parent,
-            text="Apply Changes",
-            command=self.update_image_processing
-        )
-        apply_button.pack(pady=10)
 
     def update_image_processing(self):
         """Update image when sliders change"""
-        if hasattr(self, 'current_fit_files'):
-            self.process_fit_files(self.current_fit_files)
+        if hasattr(self.current_project, 'fit_binaries'):
+            pil_image = process_fits_binaries(
+                 self.current_project.fit_binaries,
+                 zscale_contrast=self.zscale_contrast.get(),
+                 stretch_a=self.stretch_a.get(),
+                 stretch_factor=self.stretch_factor.get()
+
+            )
+            self.image_viewer.load_image(pil_image)
+            self.current_project.save_image(pil_image)
+
 
 
     def close_current_project(self):
@@ -175,7 +167,6 @@ class MainWindow:
             )
             return False
 
-    # TODO Upon pressing new project the canvas should be cleared to effectively create a "new project"
     # New Project 
     def new_project(self):
         """Create a new empty project"""
@@ -293,11 +284,8 @@ class MainWindow:
                 saved_image = self.current_project.get_processed_image()
                 if saved_image:
                     self.image_viewer.load_image(saved_image)
-
-
-                # If project has FITS files, process them with current parameters
-                if all(self.current_project.fit_files.values()):
-                    self.current_fit_files = self.current_project.fit_files
+ 
+                self.update_image_processing()
             
             except Exception as e:
                 tk.messagebox.showerror(
@@ -327,42 +315,14 @@ class MainWindow:
     def process_fit_files(self, fit_files):
         if all(fit_files.values()):  # Check if all channels have files
             try:
-                # Store files for reprocessing when sliders change
-                self.current_fit_files = fit_files
                 
-                # Load each FITS file
-                rgb_data = {}
+                # Save FITS binaries to project 
                 for channel, filepath in fit_files.items():
-                    with fits.open(filepath) as hdul:
-                        # Get the image data and process it
-                        data = hdul[0].data
-                        
-                        # Apply ZScale normalization with slider value
-                        zscale = ZScaleInterval(contrast=self.zscale_contrast.get())
-                        data = zscale(data)
-                        
-                        # Apply stretch with slider values
-                        stretch = AsinhStretch(a=self.stretch_a.get())
-                        data = stretch(data * self.stretch_factor.get())
-                        
-                        # Scale to 0-255 range for display
-                        data = (data * 255).astype(np.uint8)
-                        
-                        rgb_data[channel] = data
+                    self.current_project.save_fits_file(channel, filepath)
                 
-                # Create RGB image array
-                rgb_array = np.stack([
-                    rgb_data['R'],
-                    rgb_data['G'],
-                    rgb_data['B']
-                ], axis=-1)
-
-                # Create PIL Image and display
-                image = Image.fromarray(rgb_array, mode='RGB')
-                self.image_viewer.load_image(image)
+                # Update image using new binaries 
+                self.update_image_processing()
                 
-                # Store reference
-                self.current_image = ImageTk.PhotoImage(image)
                 
             except Exception as e:
                 print(f"Error processing FITS files: {e}")
