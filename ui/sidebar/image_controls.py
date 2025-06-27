@@ -1,17 +1,20 @@
 # Class to represent the UI widgets for the image control cell 
 import tkinter as tk 
 class ImageControlsCell(tk.Frame):
-    def __init__(self, parent, zscale_contrast, stretch_a, stretch_factor, on_apply):
+    def __init__(self, parent, zscale_contrast, lupton_stretch, lupton_Q, lupton_minimum, on_apply):
         super().__init__(parent)
         self.zscale_contrast = zscale_contrast
-        self.stretch_a = stretch_a
-        self.stretch_factor = stretch_factor
+        self.lupton_stretch = lupton_stretch
+        self.lupton_Q = lupton_Q
+        self.lupton_minimum = lupton_minimum
         self.on_apply = on_apply
 
         for name, var, from_, to, resolution in [
             ("ZScale Contrast", self.zscale_contrast, 0.1, 1.0, 0.05),
-            ("Stretch A", self.stretch_a, 0.01, 1.0, 0.01),
-            ("Stretch Factor", self.stretch_factor, 0.1, 10.0, 0.1)
+            ("Lupton Stretch", self.lupton_stretch, 0.01, 1.0, 0.01),
+            ("Lupton Q", self.lupton_Q, 0.1, 10.0, 0.1),
+            ("Lupton Minimum", self.lupton_minimum, 0.1, 10.0, 0.1)
+   
         ]:
             frame = tk.Frame(self)
             frame.pack(pady=5, fill='x', padx=5)
