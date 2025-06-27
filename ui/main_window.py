@@ -22,8 +22,9 @@ class MainWindow:
 
         # Initialize image control variables for image 
         self.zscale_contrast = tk.DoubleVar(value = 0.25)
-        self.stretch_a = tk.DoubleVar(value = 0.1)
-        self.stretch_factor = tk.DoubleVar(value=3.0)
+        self.lupton_stretch = tk.DoubleVar(value=0.5)
+        self.lupton_Q = tk.DoubleVar(value=8.0)
+        self.lupton_minimum = tk.DoubleVar(value=0.0)
 
 
         self.root.geometry("1200x800")
@@ -114,8 +115,9 @@ class MainWindow:
         self.image_controls_cell = ImageControlsCell(
         self.sidebar_frame,
         self.zscale_contrast,
-        self.stretch_a,
-        self.stretch_factor,
+        self.lupton_stretch,
+        self.lupton_Q,
+        self.lupton_minimum,
         self.update_image_processing  # Pass the function to call on apply
         )
 
@@ -135,8 +137,9 @@ class MainWindow:
             pil_image = process_fits_binaries(
                  self.current_project.fit_binaries,
                  zscale_contrast=self.zscale_contrast.get(),
-                 stretch_a=self.stretch_a.get(),
-                 stretch_factor=self.stretch_factor.get()
+                 lupton_stretch=self.lupton_stretch.get(),
+                 lupton_Q=self.lupton_Q.get(),
+                 lupton_minimum=self.lupton_minimum.get(),
 
             )
             self.image_viewer.load_image(pil_image)
@@ -189,8 +192,9 @@ class MainWindow:
 
             # Reset UI controls to default values
             self.zscale_contrast.set(self.current_project.settings['zscale_contrast'])
-            self.stretch_a.set(self.current_project.settings['stretch_a'])
-            self.stretch_factor.set(self.current_project.settings['stretch_factor'])
+            self.lupton_stretch.set(self.current_project.settings['lupton_stretch'])
+            self.lupton_Q.set(self.current_project.settings['lupton_Q'])
+            self.lupton_minimum.set(self.current_project.settings['lupton_minimum'])
             
 
 
@@ -219,8 +223,9 @@ class MainWindow:
                 # Update project settings
                 self.current_project.settings.update({
                     'zscale_contrast': self.zscale_contrast.get(),
-                    'stretch_a': self.stretch_a.get(),
-                    'stretch_factor': self.stretch_factor.get()
+                    'lupton_stretch': self.lupton_stretch.get(),
+                    'lupton_Q': self.lupton_Q.get(),
+                    'lupton_minimum': self.lupton_minimum.get(),
                 })
                 
                 # Store FITS file data
@@ -228,22 +233,15 @@ class MainWindow:
                     for channel, filepath in self.current_fit_files.items():
                         self.current_project.save_fits_file(channel, filepath)
                 
-                    # Process and save current image
-                    rgb_data = {}
-                    for channel in ['R', 'G', 'B']:
-                        data = self.current_project.get_fits_data(channel)
-                        if data is not None:
-                            zscale = ZScaleInterval(contrast=self.zscale_contrast.get())
-                            data = zscale(data)
-                            stretch = AsinhStretch(a=self.stretch_a.get())
-                            data = stretch(data * self.stretch_factor.get())
-                            data = (data * 255).astype(np.uint8)
-                            rgb_data[channel] = data
+                    pil_image = process_fits_binaries(
+                        self.current_project.fit_binaries,
+                        zscale_contrast=self.zscale_contrast.get(),
+                        lupton_stretch=self.lupton_stretch.get(),
+                        lupton_Q=self.lupton_Q.get(),
+                        lupton_minimum=self.lupton_minimum.get(),
+                    )
+                    self.current_project.save_image(pil_image)
 
-                    if len(rgb_data) == 3:
-                        rgb_array = np.stack([rgb_data['R'], rgb_data['G'], rgb_data['B']], axis=-1)
-                        pil_image = Image.fromarray(rgb_array, mode='RGB')
-                        self.current_project.save_image(pil_image)
                 
                 # Save project file
                 self.current_project.name = os.path.splitext(os.path.basename(filename))[0]
@@ -277,9 +275,11 @@ class MainWindow:
         
                 # Update UI with saved parameter values 
                 self.zscale_contrast.set(self.current_project.settings['zscale_contrast'])
-                self.stretch_a.set(self.current_project.settings['stretch_a'])
-                self.stretch_factor.set(self.current_project.settings['stretch_factor'])
-
+                self.lupton_stretch.set(self.current_project.settings['lupton_stretch'])
+                self.lupton_Q.set(self.current_project.settings['lupton_Q'])
+                self.lupton_minimum.set(self.current_project.settings['lupton_minimum'])
+                
+                
                 # Display saved image if available
                 saved_image = self.current_project.get_processed_image()
                 if saved_image:

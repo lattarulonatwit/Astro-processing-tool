@@ -28,8 +28,9 @@ class Project:
             fit_files={'R': None, 'G': None, 'B': None},  # Original file paths
             settings={                                    # Parameter settings (there may be more added and these values are subject to change)
                 'zscale_contrast': 0.25,
-                'stretch_a': 0.1,
-                'stretch_factor': 3.0
+                'lupton_stretch' : 0.5,
+                'lupton_Q': 8.0,
+                'lupton_minimum': 0.0
             },
             image_binary=None,                              # No image upon starting of a new project
             fit_binaries={'R': None, 'G': None, 'B': None}  # Binary storage of fit files
