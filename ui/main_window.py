@@ -66,7 +66,7 @@ class MainWindow:
                 ("Save As", lambda: self.save_project_as())
             ],
             "Export": [
-                ("Export Image", lambda: print("Export Image clicked")),
+                ("Export Image", lambda: self.export_image()),
             ],
             "Upload": [
                 ("Upload Fits", lambda: self.show_fits_upload())  # Change this line
@@ -262,7 +262,20 @@ class MainWindow:
         else:
             self.save_project_as()
 
-    # TODO Test this on next touch 
+    def export_image(self):
+        image = self.current_project.get_image()
+        if image:
+            filename = tk.filedialog.asksaveasfilename(
+                defaultextension=".png",
+                filetypes=[("PNG Image", "*png"), ("JPEG Image", "*.jpg"), ("All Files","*.*")]
+
+            )
+            if filename:
+                image.save(filename)
+        else:
+            tk.messagebox.showerror("Export Error", "No image to export.")
+
+    
     # Update image parameters 
     def update_project_settings_and_image(self):
         # Update project settings from current UI values
