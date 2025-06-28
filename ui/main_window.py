@@ -62,7 +62,7 @@ class MainWindow:
             "File": [
                 ("New", lambda: self.new_project()),
                 ("Open", lambda: self.load_project()),
-                ("Save", lambda: self.save()),
+                ("Save", lambda: self.save_project()),
                 ("Save As", lambda: self.save_project_as())
             ],
             "Export": [
@@ -301,6 +301,7 @@ class MainWindow:
             try:
                 # Load Project 
                 self.current_project = Project.load(filename)
+                self.current_project_path = filename # Set the current file path to enable saving
                 self.update_window_title()
         
                 # Update UI with saved parameter values 
@@ -308,6 +309,8 @@ class MainWindow:
                 self.lupton_stretch.set(self.current_project.settings['lupton_stretch'])
                 self.lupton_Q.set(self.current_project.settings['lupton_Q'])
                 self.lupton_minimum.set(self.current_project.settings['lupton_minimum'])
+
+                
                 
                 
                 # Display saved image if available
