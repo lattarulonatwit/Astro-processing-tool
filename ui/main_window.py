@@ -20,6 +20,10 @@ class MainWindow:
     def __init__(self, root):
         self.root = root
 
+        # Initalize current project path
+        self.current_project_path=None
+
+
         # Initialize image control variables for image 
         self.zscale_contrast = tk.DoubleVar(value = 0.25)
         self.lupton_stretch = tk.DoubleVar(value=0.5)
@@ -58,7 +62,8 @@ class MainWindow:
             "File": [
                 ("New", lambda: self.new_project()),
                 ("Open", lambda: self.load_project()),
-                ("Save Project", lambda: self.save_project())
+                ("Save", lambda: self.save_project()),
+                ("Save As", lambda: self.save_project_as())
             ],
             "Export": [
                 ("Export Image", lambda: print("Export Image clicked")),
@@ -208,8 +213,8 @@ class MainWindow:
             )
 
             
-    # Save project 
-    def save_project(self):
+    # Save Project As
+    def save_project_as(self):
         filename = tk.filedialog.asksaveasfilename(
             defaultextension=".aip",
             filetypes=[
@@ -233,19 +238,13 @@ class MainWindow:
                     for channel, filepath in self.current_fit_files.items():
                         self.current_project.save_fits_file(channel, filepath)
                 
-                    pil_image = process_fits_binaries(
-                        self.current_project.fit_binaries,
-                        zscale_contrast=self.zscale_contrast.get(),
-                        lupton_stretch=self.lupton_stretch.get(),
-                        lupton_Q=self.lupton_Q.get(),
-                        lupton_minimum=self.lupton_minimum.get(),
-                    )
-                    self.current_project.save_image(pil_image)
-
+                # Update the image 
+                self.update_project_settings_and_image()
                 
                 # Save project file
                 self.current_project.name = os.path.splitext(os.path.basename(filename))[0]
                 self.current_project.save(filename)
+                self.current_project_path = filename
                 self.update_window_title()
                 
             except Exception as e:
@@ -254,6 +253,37 @@ class MainWindow:
                     f"Failed to save project: {str(e)}"
                 )
 
+
+    # Save Project
+    def save_project(self):
+        if hasattr(self, 'current_project_path') and self.current_project_path:
+            self.update_project_settings_and_image()
+            self.current_project.save(self.current_project_path)
+        else:
+            self.save_project_as()
+
+    # TODO Test this on next touch 
+    # Update image parameters 
+    def update_project_settings_and_image(self):
+        # Update project settings from current UI values
+        self.current_project.settings.update({
+            'zscale_contrast': self.zscale_contrast.get(),
+            'lupton_stretch': self.lupton_stretch.get(),
+            'lupton_Q': self.lupton_Q.get(),
+            'lupton_minimum': self.lupton_minimum.get()
+        })
+
+        # Process image and save it 
+        pil_image = process_fits_binaries(
+
+            self.current_project.fit_binaries,
+            zscale_contrast=self.zscale_contrast.get(),
+            lupton_stretch=self.lupton_stretch.get(),
+            lupton_Q=self.lupton_Q.get(),
+            lupton_minimum=self.lupton_minimum.get(),
+        )
+
+        self.current_project.save_image(pil_image)
 
 
     # Load project 
@@ -271,6 +301,7 @@ class MainWindow:
             try:
                 # Load Project 
                 self.current_project = Project.load(filename)
+                self.current_project_path = filename # Set the current file path to enable saving
                 self.update_window_title()
         
                 # Update UI with saved parameter values 
@@ -278,6 +309,8 @@ class MainWindow:
                 self.lupton_stretch.set(self.current_project.settings['lupton_stretch'])
                 self.lupton_Q.set(self.current_project.settings['lupton_Q'])
                 self.lupton_minimum.set(self.current_project.settings['lupton_minimum'])
+
+                
                 
                 
                 # Display saved image if available
