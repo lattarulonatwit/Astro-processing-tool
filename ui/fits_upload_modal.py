@@ -26,7 +26,7 @@ class FitsUploadModal(tk.Toplevel):
 
         self.preview_frame = None
         self.validation_label = None
-        self.fits_header = None
+        #self.fits_header = None
         
         # Call setup_modal_ui to initialize the UI
         self.setup_modal_ui()
@@ -152,7 +152,7 @@ class FitsUploadModal(tk.Toplevel):
         def get_size(filepath):
             with fits.open(filepath) as hdul:
                 header = hdul[0].header
-                self.fits_header = hdul[0].data
+                #self.fits_header = hdul[0].data
                 if header.get('NAXIS', 0) >= 2:
                     return header['NAXIS1'], header['NAXIS2']
                 else:

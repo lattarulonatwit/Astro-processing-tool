@@ -3,3 +3,5 @@ Pillow
 tkinter
 customtkinter
 numpy
+photutils
+open-cv
