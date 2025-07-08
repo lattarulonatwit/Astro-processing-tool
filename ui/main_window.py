@@ -12,10 +12,8 @@ from core.project import Project
 from core.image_processing import process_fits_binaries
 from ui.sidebar.image_controls import ImageControlsCell
 from ui.sidebar.metadata_cell import MetadataCell
-from photutils.detection import DAOStarFinder
-from photutils.aperture import CircularAperture
-from astropy.stats import sigma_clipped_stats
-import cv2
+from core.metadata import source_detect
+
 
 
 # Class that creates Main window 
@@ -49,10 +47,9 @@ class MainWindow:
         self.root.grid_columnconfigure(1, weight=3)  # Sidebar gets less space
         self.root.grid_rowconfigure(0, weight=1)     # Row expands
         
-        #attributes to store info for plate solving
-        self.fits_header = None  # Stores the FITS  header
-        self.pil_image = None # Stores the current processed PIL image
-
+        # Initialize canvas image 
+        self.pil_image = None
+        
         #Call to create each UI element
         self.setup_menu_items()
         self.create_canvas()
@@ -164,8 +161,12 @@ class MainWindow:
     def update_metadata_cell(self):
         print("button pressed")
         """Update image from scientific analysis"""
-        if hasattr(self.current_project, 'fit_binaries'):
-            self.source_detect(self.fits_header)
+        # I believe this should just check if there's currently an image on the canvas
+        if self.pil_image is not None:
+
+            self.pil_image = source_detect(self.pil_image, self.current_project.get_fits_data('R')) # Pass in canvas image and one fits channel            
+            self.image_viewer.load_image(self.pil_image)
+            self.current_project.save_image(self.pil_image)
             
 
     def close_current_project(self):
@@ -364,7 +365,7 @@ class MainWindow:
         dialog = FitsUploadModal(self.root)
         dialog.grab_set()  # Make dialog modal
         self.root.wait_window(dialog)  # Wait for dialog to close
-        self.fits_header = dialog.getHeader()
+        #self.fits_header = dialog.getHeader()
         # The above is a blocking command meaning the code come back here once it is closed
         # The modal returns the fits files when "Build Image is clicked "
 
@@ -388,42 +389,3 @@ class MainWindow:
                 
             except Exception as e:
                 print(f"Error processing FITS files: {e}")
-
-    def source_detect(self, fit_files):
-        # Perform star detection using photutils
-        mean, median, std = sigma_clipped_stats(fit_files, sigma=3.0)
-        findStars = DAOStarFinder(fwhm=3.0, threshold=5.0 * std)
-        starTable = findStars(fit_files - median)
-        starTable.sort('mag') #sort stars by their brightest
-        starTable = starTable[:100] #shorten the list to 100
-        if starTable is None:
-            print("empty startable")
-            return
-
-        starXList = starTable['xcentroid'].data
-        starYList = starTable['ycentroid'].data
-
-        # Get the current processed image into np array form
-        if self.pil_image is None:
-            return
-        imageNp = np.array(self.pil_image)
-        imageNp = imageNp.copy() # Make a writable copy
-
-        #cirlce info
-        radius = 15  
-        color = (0, 255, 0)  
-        thickness = 2  
-
-        for xPixel, yPixel in zip(starXList, starYList):
-            # OpenCV's circle function expects integer coordinates
-            centerX = int(xPixel)
-            centerY = int(yPixel)
-
-            # Check if the pixel coords are within the image bounds
-            imageH, imageW, _ = imageNp.shape
-            if 0 <= centerX < imageW and 0 <= centerY < imageH:
-                cv2.circle(imageNp, (centerX, centerY), radius, color, thickness) #then add circle
-
-            # Convert np array back to PIL Image and display
-            self.pil_image = Image.fromarray(imageNp, mode='RGB')
-            self.image_viewer.load_image(self.pil_image) 
