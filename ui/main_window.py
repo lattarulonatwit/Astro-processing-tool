@@ -31,6 +31,10 @@ class MainWindow:
         self.lupton_Q = tk.DoubleVar(value=8.0)
         self.lupton_minimum = tk.DoubleVar(value=0.0)
 
+        #Initialize metadata control values(stored after image is opened)
+        self.starsToDetect = tk.IntVar(value = 1)
+        self.brightest = None
+        self.numStars = None
 
         self.root.geometry("1200x800")
         self.root.minsize(1000, 600)  # Set minimum width and height
@@ -46,7 +50,8 @@ class MainWindow:
         self.root.grid_rowconfigure(0, weight=1)     # Row expands
         
         #attributes to store info for plate solving
-        self.fits_header = None  # Stores the FITS  header
+        self.imageData = None #stores FITS image data for image processing
+        self.fitsHeader = None  # Stores the FITS  header
         self.pil_image = None # Stores the current processed PIL image
 
         #Call to create each UI element
@@ -116,7 +121,6 @@ class MainWindow:
         self.sidebar_frame.grid_columnconfigure(0, weight=1)
         
         
-
         # START OF CELL CREATION
 
         # Create Control cell
@@ -136,6 +140,7 @@ class MainWindow:
         # Create Metadata cell
         self.metadata_cell = MetadataCell(
         self.sidebar_frame, # Parent is the sidebar frame
+        self.starsToDetect,
         self.update_metadata_cell
         )
         self.metadata_cell.grid(row=1, column=0, sticky="nsew")
@@ -156,11 +161,11 @@ class MainWindow:
             self.image_viewer.load_image(self.pil_image)
             self.current_project.save_image(self.pil_image)
 
-    def update_metadata_cell(self):
-        print("button pressed")
+    def update_metadata_cell(self): 
         """Update image from scientific analysis"""
         if hasattr(self.current_project, 'fit_binaries'):
-            self.source_detect(self.fits_header)
+            self.source_detect(self.imageData)
+            self.metadata_cell.updateLabels(self.fitsHeader['FOCALLEN'], self.fitsHeader["EXPTIME"], self.fitsHeader['ISOSPEED'], self.numStars, self.brightest)
             
 
     def close_current_project(self):
@@ -318,8 +323,9 @@ class MainWindow:
         dialog = FitsUploadModal(self.root)
         dialog.grab_set()  # Make dialog modal
         self.root.wait_window(dialog)  # Wait for dialog to close
-        self.fits_header = dialog.getHeader()
-        # The above is a blocking command meaning the code come back here once it is closed
+        self.imageData = dialog.getImageData()
+        self.fitsHeader = dialog.getFitsHeader()
+           # The above is a blocking command meaning the code come back here once it is closed
         # The modal returns the fits files when "Build Image is clicked "
 
         # Get the files selected in the dialog
@@ -343,13 +349,18 @@ class MainWindow:
             except Exception as e:
                 print(f"Error processing FITS files: {e}")
 
-    def source_detect(self, fit_files):
+    def source_detect(self, imageData):
         # Perform star detection using photutils
-        mean, median, std = sigma_clipped_stats(fit_files, sigma=3.0)
+        mean, median, std = sigma_clipped_stats(imageData, sigma=3.0)
         findStars = DAOStarFinder(fwhm=3.0, threshold=5.0 * std)
-        starTable = findStars(fit_files - median)
-        starTable.sort('mag') #sort stars by their brightest
-        starTable = starTable[:100] #shorten the list to 100
+        starTable = findStars(imageData - median)
+
+        #Organize star data for vizualization
+        starTable.sort('daofind_mag') #sort stars by their brightest
+        self.brightest = starTable[0]['daofind_mag']
+        self.numStars = len(starTable)
+        starTable = starTable[:self.starsToDetect.get()] #shorten the list to 100 // going to change this to be controllable by the user
+    
         if starTable is None:
             print("empty startable")
             return
@@ -370,6 +381,7 @@ class MainWindow:
 
         for xPixel, yPixel in zip(starXList, starYList):
             # OpenCV's circle function expects integer coordinates
+
             centerX = int(xPixel)
             centerY = int(yPixel)
 
@@ -378,6 +390,6 @@ class MainWindow:
             if 0 <= centerX < imageW and 0 <= centerY < imageH:
                 cv2.circle(imageNp, (centerX, centerY), radius, color, thickness) #then add circle
 
-            # Convert np array back to PIL Image and display
-            self.pil_image = Image.fromarray(imageNp, mode='RGB')
-            self.image_viewer.load_image(self.pil_image) 
+        # Convert np array back to PIL Image and display
+        self.pil_image = Image.fromarray(imageNp, mode='RGB')
+        self.image_viewer.load_image(self.pil_image) 

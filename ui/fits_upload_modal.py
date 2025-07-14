@@ -26,7 +26,8 @@ class FitsUploadModal(tk.Toplevel):
 
         self.preview_frame = None
         self.validation_label = None
-        self.fits_header = None
+        self.imageData = None
+        self.fitsHeader = None
         
         # Call setup_modal_ui to initialize the UI
         self.setup_modal_ui()
@@ -151,10 +152,10 @@ class FitsUploadModal(tk.Toplevel):
     def check_rgb_sized(self, red_path, green_path, blue_path):
         def get_size(filepath):
             with fits.open(filepath) as hdul:
-                header = hdul[0].header
-                self.fits_header = hdul[0].data
-                if header.get('NAXIS', 0) >= 2:
-                    return header['NAXIS1'], header['NAXIS2']
+                self.fitsHeader = hdul[0].header
+                self.imageData = hdul[0].data
+                if self.fitsHeader.get('NAXIS', 0) >= 2:
+                    return self.fitsHeader['NAXIS1'], self.fitsHeader['NAXIS2']
                 else:
                     return None
         r_size = get_size(red_path)
@@ -184,8 +185,11 @@ class FitsUploadModal(tk.Toplevel):
         # Return the selected files
         return selected_files
 
-    def getHeader(self):
-        return self.fits_header
+    def getFitsHeader(self):
+        return self.fitsHeader
+
+    def getImageData(self):
+        return self.imageData
 
     def cancel(self):
         # Clear selections
