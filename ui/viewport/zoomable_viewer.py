@@ -26,9 +26,7 @@ class ZoomableImageViewer(tk.Frame):
     def load_image(self, image):
         """Load a PIL Image into the viewer"""
         self.image = image
-        self.zoom_level = 1.0
-        self.update_display()
-        self.center_image()
+        self.fit_to_canvas()
 
     def update_display(self):
         """Update the displayed image with current zoom level"""
@@ -39,8 +37,15 @@ class ZoomableImageViewer(tk.Frame):
         new_width = int(self.image.width * self.zoom_level)
         new_height = int(self.image.height * self.zoom_level)
         
+        # Use faster resize for larger images 
+        if new_width * new_height > 2000 * 2000:
+            resample_method = Image.NEAREST
+        else:
+            resample_method = Image.LANCZOS
+
+
         # Resize image
-        resized = self.image.resize((new_width, new_height), Image.LANCZOS)
+        resized = self.image.resize((new_width, new_height), resample_method)
         self.display_image = ImageTk.PhotoImage(resized)
 
         # Update or create image on canvas
@@ -52,6 +57,22 @@ class ZoomableImageViewer(tk.Frame):
             image=self.display_image,
             anchor="center"
         )
+    
+    def fit_to_canvas(self):
+        """Zoom out so entire image fits in canvas"""
+        if not self.image:
+            return
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        if canvas_width < 1 or canvas_height < 1:
+            # Canvas not initalized yet
+            self.after(10, self.fit_to_canvas)
+        
+        scale_w = canvas_width /self.image.width
+        scale_h = canvas_height / self.image.height
+        self.zoom_level = min(scale_w, scale_h, 1.0)
+        self.update_display()
+        self.center_image()
 
     def center_image(self, event=None):
         """Center the image in the canvas"""
@@ -72,12 +93,12 @@ class ZoomableImageViewer(tk.Frame):
 
         # Calculate zoom direction
         if event.delta > 0:
-            self.zoom_level *= 1.1
+            self.zoom_level *= 1.3
         else:
-            self.zoom_level /= 1.1
+            self.zoom_level /= 1.3
 
         # Limit zoom range
-        self.zoom_level = min(max(0.1, self.zoom_level), 5.0)
+        self.zoom_level = min(max(0.1, self.zoom_level), 2.5)
         
         # Update display
         self.update_display()
