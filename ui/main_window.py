@@ -12,7 +12,7 @@ from core.project import Project
 from core.image_processing import process_fits_binaries
 from ui.sidebar.image_controls import ImageControlsCell
 from ui.sidebar.metadata_cell import MetadataCell
-from core.metadata import source_detect
+from core.metadata import source_detect, getBrightest, getnumStars
 
 
 
@@ -37,6 +37,16 @@ class MainWindow:
         self.starsToDetect = tk.IntVar(value = 1)
         self.brightest = None
         self.numStars = None
+
+        #Initialize image header for image stats and the desired info
+        self.fitsHeader = None
+        self.fLength = None
+        self.subTime = None
+        self.integrationTime = None
+        self.gain = None
+        self.objectRA = None
+        self.objectDec = None
+        self.pixelScale = None
 
         self.root.geometry("1200x800")
         self.root.minsize(1000, 600)  # Set minimum width and height
@@ -168,9 +178,30 @@ class MainWindow:
         # I believe this should just check if there's currently an image on the canvas
         if self.pil_image is not None:
             self.update_image_processing()
-            self.pil_image = source_detect(self.pil_image, self.current_project.get_fits_data('R'), self.starsToDetect.get()) # Pass in canvas image and one fits channel            
+            self.pil_image = source_detect(self.pil_image, self.current_project.get_fits_data('R'), self.starsToDetect.get()) # Pass in canvas image and one fits channel  
+            self.fitsHeader = self.current_project.get_fits_Header('R')
+            print(self.fitsHeader)
+            self.assignInfo()
+            self.metadata_cell.updateLabels(self.fitsHeader['FOCALLEN'], self.fitsHeader["EXPTIME"], self.integrationTime, self.gain, self.fitsHeader['OBJCTRA'], self.fitsHeader['OBJCTDEC'], self.pixelScale, getnumStars(), getBrightest())          
             self.image_viewer.load_image(self.pil_image)
             self.current_project.save_image(self.pil_image)
+
+    def assignInfo(self):
+        if 'LIVETIME' in self.fitsHeader:
+            self.integrationTime = {self.fitsHeader['LIVETIME']}
+        else:
+            self.integrationTime = -1  
+
+        if 'ISOSPEED' in self.fitsHeader:
+            self.gain = {self.fitsHeader['ISOSPEED']}
+        else:
+            self.gain = -1
+
+        if 'CDELT2' in self.fitsHeader:
+            self.pixelScale = {self.fitsHeader['LIVETIME']}
+        else:
+            self.pixelScale = -1
+        
             
 
     def close_current_project(self):
