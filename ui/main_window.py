@@ -167,6 +167,7 @@ class MainWindow:
         """Update image from scientific analysis"""
         # I believe this should just check if there's currently an image on the canvas
         if self.pil_image is not None:
+            self.update_image_processing()
             self.pil_image = source_detect(self.pil_image, self.current_project.get_fits_data('R'), self.starsToDetect.get()) # Pass in canvas image and one fits channel            
             self.image_viewer.load_image(self.pil_image)
             self.current_project.save_image(self.pil_image)

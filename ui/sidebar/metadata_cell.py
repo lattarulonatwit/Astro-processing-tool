@@ -24,6 +24,6 @@ class MetadataCell(tk.Frame):
         starID_button = tk.Button(
             self,
             text="Identify Stars",
-            command=self.on_starID
+            command= self.on_starID
         )
         starID_button.pack(pady=10)
