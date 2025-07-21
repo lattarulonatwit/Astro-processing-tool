@@ -33,6 +33,10 @@ class MainWindow:
         self.lupton_Q = tk.DoubleVar(value=8.0)
         self.lupton_minimum = tk.DoubleVar(value=0.0)
 
+        #Initialize metadata control values(stored after image is opened)
+        self.starsToDetect = tk.IntVar(value = 1)
+        self.brightest = None
+        self.numStars = None
 
         self.root.geometry("1200x800")
         self.root.minsize(1000, 600)  # Set minimum width and height
@@ -138,6 +142,7 @@ class MainWindow:
         # Create Metadata cell
         self.metadata_cell = MetadataCell(
         self.sidebar_frame, # Parent is the sidebar frame
+        self.starsToDetect,
         self.update_metadata_cell
         )
         self.metadata_cell.grid(row=1, column=0, sticky="nsew")
@@ -159,12 +164,10 @@ class MainWindow:
             self.current_project.save_image(self.pil_image)
 
     def update_metadata_cell(self):
-        print("button pressed")
         """Update image from scientific analysis"""
         # I believe this should just check if there's currently an image on the canvas
         if self.pil_image is not None:
-
-            self.pil_image = source_detect(self.pil_image, self.current_project.get_fits_data('R')) # Pass in canvas image and one fits channel            
+            self.pil_image = source_detect(self.pil_image, self.current_project.get_fits_data('R'), self.starsToDetect.get()) # Pass in canvas image and one fits channel            
             self.image_viewer.load_image(self.pil_image)
             self.current_project.save_image(self.pil_image)
             

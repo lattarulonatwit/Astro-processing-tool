@@ -15,16 +15,20 @@ fit_files -- one of the fits channels R, G, or B it can be either one
 Return: An image with circles around the stahs (Boston Accent)
 """
 
-def source_detect(pil_image, fit_files):
+brightest = None
+numStars = None
+
+def source_detect(pil_image, fit_files, starsToDetect):
+        global brightest
+        global numStars
         # Perform star detection using photutils
         mean, median, std = sigma_clipped_stats(fit_files, sigma=3.0)
         findStars = DAOStarFinder(fwhm=3.0, threshold=5.0 * std)
         starTable = findStars(fit_files - median)
-        starTable.sort('mag') #sort stars by their brightest
-        starTable = starTable[:100] #shorten the list to 100
-        if starTable is None:
-            print("empty startable")
-            return
+        starTable.sort('daofind_mag') #sort stars by their brightest
+        brightest = starTable[0]['daofind_mag']
+        numStars = len(starTable)
+        starTable = starTable[:starsToDetect] #shorten the list to 100
 
         starXList = starTable['xcentroid'].data
         starYList = starTable['ycentroid'].data
@@ -54,3 +58,10 @@ def source_detect(pil_image, fit_files):
             pil_image = Image.fromarray(imageNp, mode='RGB')
             
         return pil_image
+
+def getBrightest():
+     return brightest
+
+def getnumStars():
+     return numStars
+     
