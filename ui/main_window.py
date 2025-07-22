@@ -198,7 +198,7 @@ class MainWindow:
             self.gain = -1
 
         if 'CDELT2' in self.fitsHeader:
-            self.pixelScale = {self.fitsHeader['LIVETIME']}
+            self.pixelScale = {self.fitsHeader['CDELT2']}
         else:
             self.pixelScale = -1
         
