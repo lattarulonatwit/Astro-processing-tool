@@ -74,8 +74,8 @@ class MetadataCell(tk.Frame):
      def updateLabels(self, focalLength, shutterSpeed, integrationTime, ISO, imageRA, imageDec, pixelScale, numStars, brightest):
         #Mess with the labels
         self.focalLengthLabel["text"] = f"Telescope Focal Length: {round(focalLength)} mm"
-        self.shutterSpeedLabel["text"]= f"Camera Exposure Time: {shutterSpeed} s"
-        self.integrationTimeLabel["text"]= f"Total Image Exposure Time: {integrationTime/60} m"
+        self.shutterSpeedLabel["text"]= f"Camera Exposure Time: {round(shutterSpeed)} s"
+        self.integrationTimeLabel["text"]= f"Total Image Exposure Time: {integrationTime/60: .2f} m"
         self.ISOLabel["text"] = f"Sensor gain: {ISO}"
 
         self.RALabel["text"]= f"Image Right Ascension: {imageRA}" 
