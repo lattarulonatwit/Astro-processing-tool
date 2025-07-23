@@ -49,6 +49,13 @@ class Project:
             return fits.open(buffer)[0].data
         return None
     
+    def get_fits_Header(self, channel: str):
+        """Get FITS data from stored binary"""
+        if self.fit_binaries.get(channel):
+            buffer = BytesIO(self.fit_binaries[channel])
+            return fits.open(buffer)[0].header
+        return None
+    
     def get_processed_image(self) -> Optional[Image.Image]:
         """Convert stored binary data back to PIL Image"""
         if self.image_binary:
