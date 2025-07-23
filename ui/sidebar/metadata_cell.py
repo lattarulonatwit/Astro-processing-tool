@@ -37,7 +37,7 @@ class MetadataCell(tk.Frame):
         self.captureTab = ttk.Frame(self.dataTabControl)
         self.astroTab = ttk.Frame(self.dataTabControl)
         self.dataTabControl.add(self.captureTab, text="Image Data")
-        self.dataTabControl.add(self.astroTab, text = "Astro Data")
+        self.dataTabControl.add(self.astroTab, text = "Star Data")
 
         
         #labels for image info
@@ -73,14 +73,26 @@ class MetadataCell(tk.Frame):
 
      def updateLabels(self, focalLength, shutterSpeed, integrationTime, ISO, imageRA, imageDec, pixelScale, numStars, brightest):
         #Mess with the labels
-        self.focalLengthLabel["text"] = f"Telescope Focal Length: {focalLength} mm"
+        self.focalLengthLabel["text"] = f"Telescope Focal Length: {round(focalLength)} mm"
         self.shutterSpeedLabel["text"]= f"Camera Exposure Time: {shutterSpeed} s"
-        self.integrationTimeLabel["text"]= f"Total Image Exposure Time: {int(integrationTime.pop())/60} s"
+        self.integrationTimeLabel["text"]= f"Total Image Exposure Time: {integrationTime/60} m"
         self.ISOLabel["text"] = f"Sensor gain: {ISO}"
 
         self.RALabel["text"]= f"Image Right Ascension: {imageRA}" 
         self.DecLabel["text"]= f"Image Declination: {imageDec}" 
-        self.pixelScaleLabel["text"] = f"Image Pixel Scale: {int(pixelScale.pop()):.8f} Arcsecond / pixel"
+        self.pixelScaleLabel["text"] = f"Image Pixel Scale: {pixelScale*3600:.2f} Arcsecond / pixel"
         self.brightestLabel["text"] = f"Brightest Star Magnitude: {brightest:.2f}"
         self.numStarsLabel["text"]= f"Number of Stars Detected: {numStars}" 
+
+     def clearLabels(self):
+        self.focalLengthLabel["text"] = "Telescope Focal Length: N/A"
+        self.shutterSpeedLabel["text"]= "Camera Exposure Time: N/A"
+        self.integrationTimeLabel["text"]= "Total Image Exposure Time: N/A"
+        self.ISOLabel["text"] = "Sensor gain: N/A"
+
+        self.RALabel["text"]= "Image Right Ascension: N/A" 
+        self.DecLabel["text"]= "Image Declination: N/A" 
+        self.pixelScaleLabel["text"] = "Image Pixel Scale: N/A"
+        self.brightestLabel["text"] = "Brightest Star Magnitude: N/A"
+        self.numStarsLabel["text"]= "Number of Stars Detected: N/A" 
 

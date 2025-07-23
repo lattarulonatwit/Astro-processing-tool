@@ -25,8 +25,8 @@ def source_detect(pil_image, fit_files, starsToDetect):
         mean, median, std = sigma_clipped_stats(fit_files, sigma=3.0)
         findStars = DAOStarFinder(fwhm=3.0, threshold=5.0 * std)
         starTable = findStars(fit_files - median)
-        starTable.sort('daofind_mag') #sort stars by their brightest
-        brightest = starTable[0]['daofind_mag']
+        starTable.sort('mag') #sort stars by their brightest
+        brightest = starTable[0]['mag']
         numStars = len(starTable)
         starTable = starTable[:starsToDetect] #shorten the list to 100
 

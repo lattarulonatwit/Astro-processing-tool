@@ -180,30 +180,13 @@ class MainWindow:
             self.update_image_processing()
             self.pil_image = source_detect(self.pil_image, self.current_project.get_fits_data('R'), self.starsToDetect.get()) # Pass in canvas image and one fits channel  
             self.fitsHeader = self.current_project.get_fits_Header('R')
-            print(self.fitsHeader)
-            self.assignInfo()
-            self.metadata_cell.updateLabels(self.fitsHeader['FOCALLEN'], self.fitsHeader["EXPTIME"], self.integrationTime, self.gain, self.fitsHeader['OBJCTRA'], self.fitsHeader['OBJCTDEC'], self.pixelScale, getnumStars(), getBrightest())          
+            self.brightest = getBrightest()
+            self.numStars = getnumStars()
+            if 'PROGRAM' in self.fitsHeader:
+                self.metadata_cell.updateLabels(self.fitsHeader['FOCALLEN'], self.fitsHeader["EXPTIME"], self.fitsHeader['LIVETIME'], self.fitsHeader['ISOSPEED'], self.fitsHeader['OBJCTRA'], self.fitsHeader['OBJCTDEC'], self.fitsHeader['CDELT2'], self.numStars, self.brightest)
             self.image_viewer.load_image(self.pil_image)
-            self.current_project.save_image(self.pil_image)
-
-    def assignInfo(self):
-        if 'LIVETIME' in self.fitsHeader:
-            self.integrationTime = {self.fitsHeader['LIVETIME']}
-        else:
-            self.integrationTime = -1  
-
-        if 'ISOSPEED' in self.fitsHeader:
-            self.gain = {self.fitsHeader['ISOSPEED']}
-        else:
-            self.gain = -1
-
-        if 'CDELT2' in self.fitsHeader:
-            self.pixelScale = {self.fitsHeader['CDELT2']}
-        else:
-            self.pixelScale = -1
+            self.current_project.save_image(self.pil_image)   
         
-            
-
     def close_current_project(self):
         """Close and cleanup current project"""
         try:
@@ -218,6 +201,9 @@ class MainWindow:
             # Clear current image reference
             if hasattr(self, 'current_image'):
                 delattr(self, 'current_image')
+            
+            if self.fitsHeader is not None:
+                self.metadata_cell.clearLabels()
                 
             return True
         except Exception as e:
