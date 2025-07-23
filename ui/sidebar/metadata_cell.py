@@ -1,11 +1,14 @@
 # Class to represent the UI widgets for the metadata cell  
 import tkinter as tk
 from tkinter import ttk
+
 class MetadataCell(tk.Frame):
-     def __init__(self, parent, starsToDetect, on_starID):
+     def __init__(self, parent, starsToDetect, objToDetect, on_starID, onToggle):
         super().__init__(parent)
         self.on_starID = on_starID
         self.starsToDetect = starsToDetect
+        self.objToDetect = objToDetect
+        self.onToggle = onToggle
         for name, var, from_, to, resolution in [
             ("Number of stars to detect", self.starsToDetect, 1, 100, 1),
         ]:
@@ -22,14 +25,35 @@ class MetadataCell(tk.Frame):
             )
             slider.pack(fill='x', expand=True)
 
+        for name, var, from_, to, resolution in [
+            ("Number of objects to detect", self.objToDetect, 1, 5, 1), #allow for up to 5 objects to be selected
+        ]:
+            frame = tk.Frame(self)
+            frame.pack(pady=5, fill='x', padx=5)
+            tk.Label(frame, text=name).pack(side='top', anchor='w')
+            slider = tk.Scale(
+                frame,
+                variable=var,
+                from_=from_,
+                to=to,
+                resolution=resolution,
+                orient='horizontal'
+            )
+            slider.pack(fill='x', expand=True)
+
         starID_button = tk.Button(
             self,
-            text="Identify Stars",
+            text="Search",
             command= self.on_starID
         )
         starID_button.pack(pady=10)
 
-        
+        toggleStarButton = ttk.Checkbutton(
+            self,
+            text="Show ID layover",
+            command = self.onToggle
+        )
+        toggleStarButton.pack(pady=5)
           #tab to switch views
         self.dataTabControl = ttk.Notebook(self)    
         self.dataTabControl.pack(pady=5, fill='both')
@@ -39,7 +63,6 @@ class MetadataCell(tk.Frame):
         self.dataTabControl.add(self.captureTab, text="Image Data")
         self.dataTabControl.add(self.astroTab, text = "Star Data")
 
-        
         #labels for image info
         #imaga data
 
@@ -71,6 +94,7 @@ class MetadataCell(tk.Frame):
         self.brightestLabel = tk.Label(self.astroTab, text="Brightest Star Magnitude: N/A")
         self.brightestLabel.grid(row=5, column=0, sticky="ew", pady=(5, 0))
 
+    #delivering data to be displayed on the metadata tab
      def updateLabels(self, focalLength, shutterSpeed, integrationTime, ISO, imageRA, imageDec, pixelScale, numStars, brightest):
         #Mess with the labels
         self.focalLengthLabel["text"] = f"Telescope Focal Length: {round(focalLength)} mm"
@@ -84,6 +108,7 @@ class MetadataCell(tk.Frame):
         self.brightestLabel["text"] = f"Brightest Star Magnitude: {brightest:.2f}"
         self.numStarsLabel["text"]= f"Number of Stars Detected: {numStars}" 
 
+    #this is to reset all image info values when switching images
      def clearLabels(self):
         self.focalLengthLabel["text"] = "Telescope Focal Length: N/A"
         self.shutterSpeedLabel["text"]= "Camera Exposure Time: N/A"

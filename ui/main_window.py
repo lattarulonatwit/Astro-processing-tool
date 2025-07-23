@@ -12,7 +12,7 @@ from core.project import Project
 from core.image_processing import process_fits_binaries
 from ui.sidebar.image_controls import ImageControlsCell
 from ui.sidebar.metadata_cell import MetadataCell
-from core.metadata import source_detect, getBrightest, getnumStars
+from core.metadata import source_detect, nameObject, getBrightest, getnumStars
 
 
 
@@ -35,18 +35,13 @@ class MainWindow:
 
         #Initialize metadata control values(stored after image is opened)
         self.starsToDetect = tk.IntVar(value = 1)
+        self.objectToDetect = tk.IntVar(value = 1)
         self.brightest = None
         self.numStars = None
+        self.toggleStars = tk.BooleanVar(value = True)
 
         #Initialize image header for image stats and the desired info
         self.fitsHeader = None
-        self.fLength = None
-        self.subTime = None
-        self.integrationTime = None
-        self.gain = None
-        self.objectRA = None
-        self.objectDec = None
-        self.pixelScale = None
 
         self.root.geometry("1200x800")
         self.root.minsize(1000, 600)  # Set minimum width and height
@@ -68,6 +63,7 @@ class MainWindow:
         self.setup_menu_items()
         self.create_canvas()
         self.setup_sidebar()
+        self.coordinateBar()
 
         self.last_update = 0
         self.update_delay = 0.1  # 100ms delay between updates
@@ -107,11 +103,12 @@ class MainWindow:
         # Create the frame to hold the canvas 
         self.canvas_frame = tk.Frame(self.root)
         self.canvas_frame.grid(row=0, column=0, sticky="nsew")
-        
-
         self.image_viewer = ZoomableImageViewer(self.canvas_frame)
         self.image_viewer.pack(fill="both", expand=True)
 
+        #adding the live mouse update to the canvas
+        self.image_viewer.canvas.bind("<Motion>", self.updateMouse)
+        self.image_viewer.canvas.bind("<Leave>", self.clearCoord)
 
         # self.canvas = tk.Canvas(
         #     self.canvas_frame,
@@ -153,11 +150,30 @@ class MainWindow:
         self.metadata_cell = MetadataCell(
         self.sidebar_frame, # Parent is the sidebar frame
         self.starsToDetect,
-        self.update_metadata_cell
+        self.objectToDetect,
+        self.update_metadata_cell,
+        self.idOnOff
         )
         self.metadata_cell.grid(row=1, column=0, sticky="nsew")
         # END OF CELL CREATION
 
+    #Work in progress xy / radec live coordinate view. 
+    def coordinateBar(self):
+        #coordinate frame to root
+        self.coordinates = tk.Frame(self.root, bd=1, relief=tk.SUNKEN)
+        self.coordinates.grid(row=1, column=0, columnspan=2, sticky="ew")
+        #values for label
+        self.xyCoordText = tk.StringVar()
+        self.xyCoordText.set("X: --- Y: ---")
+        #create and add coordinate label
+        self.xyCoordLabel = tk.Label(self.coordinates, textvariable=self.xyCoordText, anchor="w")
+        self.xyCoordLabel.pack(side=tk.LEFT, padx=5, pady=2)
+
+    def updateMouse(self, event):
+        self.xyCoordText.set(f"X: {event.x} Y: {event.y}")
+
+    def clearCoord(self, event=None):
+        self.xyCoordText.set("X: --- Y: ---")
 
     def update_image_processing(self):
         """Update image when sliders change"""
@@ -179,14 +195,24 @@ class MainWindow:
         if self.pil_image is not None:
             self.update_image_processing()
             self.pil_image = source_detect(self.pil_image, self.current_project.get_fits_data('R'), self.starsToDetect.get()) # Pass in canvas image and one fits channel  
-            self.fitsHeader = self.current_project.get_fits_Header('R')
+            self.fitsHeader = self.current_project.get_fits_Header('R') #pull fits header data from first channel
             self.brightest = getBrightest()
             self.numStars = getnumStars()
-            if 'PROGRAM' in self.fitsHeader:
+            if 'PROGRAM' in self.fitsHeader: #filter for siril only fits header 
                 self.metadata_cell.updateLabels(self.fitsHeader['FOCALLEN'], self.fitsHeader["EXPTIME"], self.fitsHeader['LIVETIME'], self.fitsHeader['ISOSPEED'], self.fitsHeader['OBJCTRA'], self.fitsHeader['OBJCTDEC'], self.fitsHeader['CDELT2'], self.numStars, self.brightest)
+                self.pil_image = nameObject(self.pil_image, self.fitsHeader, self.objectToDetect)
+
             self.image_viewer.load_image(self.pil_image)
             self.current_project.save_image(self.pil_image)   
-        
+    
+    def idOnOff(self):
+        """Toggles the display of star identification circles.""" 
+        self.toggleStars.set(not self.toggleStars.get()) # Toggle the BooleanVar's state
+        if self.toggleStars.get() is True:
+            self.update_metadata_cell() #apply cirlces + name method to the image
+        else:
+            self.update_image_processing() #update image processing clears the image of any circles or labels
+
     def close_current_project(self):
         """Close and cleanup current project"""
         try:
@@ -386,10 +412,9 @@ class MainWindow:
         dialog = FitsUploadModal(self.root)
         dialog.grab_set()  # Make dialog modal
         self.root.wait_window(dialog)  # Wait for dialog to close
-        #self.fits_header = dialog.getHeader()
         # The above is a blocking command meaning the code come back here once it is closed
         # The modal returns the fits files when "Build Image is clicked "
-
+        self.metadata_cell.clearLabels()
         # Get the files selected in the dialog
         if hasattr(dialog, 'fit_files'):
             self.process_fit_files(dialog.fit_files)
