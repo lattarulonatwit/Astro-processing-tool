@@ -5,3 +5,4 @@ customtkinter
 numpy
 photutils
 open-cv
+astroquery
