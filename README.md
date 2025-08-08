@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Astro Image Processor** is a desktop application designed for amateur astronomers and astrophotographers to process, analyze, and visualize astronomical images—especially those in the FITS format. It provides tools for combining RGB channels, adjusting image parameters, detecting stars, overlaying scientific metadata, and exporting processed images.
+**Astro Image Processor** is a python application designed for amateur astronomers and astrophotographers to process, analyze, and visualize astronomical images from FITS files they create or find online. It provides tools for combining RGB channels, adjusting image parameters, detecting stars, overlaying scientific metadata, and exporting processed images.  Our goal was to create a citizen science app to allow users to create pretty images as well as learn from said images.
 
 ---
 
